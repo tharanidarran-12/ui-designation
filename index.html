@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cloud Cost Tracker</title>
+<style>
+  :root {
+    --bg: #f7f5f2;
+    --card: #ffffff;
+    --text: #1d1b19;
+    --muted: #6f6a64;
+    --border: #e7e2dc;
+    --accent: #c2410c;
+    --accent-soft: #fdf0ea;
+    --accent-border: #f1c7b3;
+    --dark: #111827;
+    --green: #2f7a53;
+    --green-soft: #eef7f2;
+    --red: #b91c1c;
+    --shadow: 0 1px 2px rgba(20, 16, 12, 0.05), 0 2px 8px rgba(20, 16, 12, 0.04);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  .hidden { display: none !important; }
+
+  body {
+    font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    min-height: 100vh;
+    font-size: 16px;
+  }
+
+  button, input, select { font: inherit; }
+  button { cursor: pointer; }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar {
+    width: 260px;
+    background: var(--card);
+    border-right: 1px solid var(--border);
+    padding: 24px 18px;
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    flex-shrink: 0;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; padding: 0 6px; }
+  .brand-mark {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: var(--accent); color: #fff;
+    display: grid; place-items: center; font-size: 18px; font-weight: 700;
+  }
+  .brand-name { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+  .brand-name span { color: var(--accent); }
+  .brand-sub { font-size: 12px; color: var(--muted); }
+
+  .space-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin: 16px 6px 0;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--accent); background: var(--accent-soft);
+    border: 1px solid var(--accent-border); padding: 5px 10px; border-radius: 999px;
+  }
+
+  .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+  .nav { display: flex; flex-direction: column; gap: 6px; }
+  .nav-link {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 16px; border-radius: 12px;
+    color: var(--text); text-decoration: none; font-weight: 500; font-size: 17px;
+    border: 1px solid transparent;
+  }
+  .nav-link .icon { width: 22px; text-align: center; color: var(--muted); font-size: 18px; }
+  .nav-link:hover { background: #faf8f6; }
+  .nav-link.active {
+    background: var(--accent-soft); border-color: var(--accent-border);
+    color: var(--accent); font-weight: 600;
+  }
+  .nav-link.active .icon { color: var(--accent); }
+
+  .side-card {
+    margin-top: auto;
+    background: #faf7f4; border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px;
+  }
+  .side-card .title { font-size: 13px; font-weight: 600; }
+  .side-card p { font-size: 12px; color: var(--muted); margin: 6px 0 10px; line-height: 1.4; }
+  .btn-outline {
+    width: 100%; padding: 10px; border-radius: 10px;
+    background: #fff; border: 1px solid var(--border); color: var(--text); font-weight: 600;
+  }
+
+  /* ---------- Main ---------- */
+  .main { flex: 1; min-width: 0; padding: 28px 36px 60px; max-width: 980px; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; box-shadow: var(--shadow);
+  }
+
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 20px; flex-wrap: wrap; padding: 24px 28px; margin-bottom: 16px;
+  }
+  .header h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; }
+  .header p { color: var(--muted); font-size: 17px; margin-top: 4px; }
+  .header-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+  .pill-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 16px; border-radius: 999px; font-weight: 600; font-size: 14px;
+    border: 1px solid transparent;
+  }
+  .pill-dark { background: var(--dark); color: #fff; font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; }
+  .pill-accent { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-border); }
+  .pill-neutral { background: #f4f1ee; color: var(--text); border-color: var(--border); }
+
+  /* Summary */
+  .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+  .stat { padding: 20px 22px; }
+  .stat .label { color: var(--muted); font-size: 14px; font-weight: 500; }
+  .stat .value { font-size: 30px; font-weight: 800; margin-top: 6px; letter-spacing: -0.02em; }
+  .stat .note { font-size: 13px; margin-top: 6px; color: var(--muted); }
+  .note.up { color: var(--red); }
+  .note.down { color: var(--green); }
+
+  /* Grid and panels */
+  .grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 20px; align-items: start; }
+  .panel { padding: 24px 26px; }
+  .panel-head { margin-bottom: 20px; }
+  .panel-head h2 { font-size: 20px; font-weight: 800; letter-spacing: -0.01em; }
+  .panel-head p { color: var(--muted); font-size: 14px; margin-top: 4px; }
+
+  /* Bar chart */
+  .chart {
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 14px;
+    height: 260px; border-bottom: 1px solid var(--border); padding-top: 10px;
+  }
+  .bar-col {
+    flex: 1; height: 100%; display: flex; flex-direction: column;
+    justify-content: flex-end; align-items: center; cursor: pointer;
+  }
+  .bar-value { font-size: 13px; color: var(--muted); margin-bottom: 6px; font-weight: 600; }
+  .bar { width: 100%; max-width: 52px; background: #e9dcd2; border-radius: 8px 8px 0 0; transition: background 0.2s; }
+  .bar-col:hover .bar { background: #d9b8a3; }
+  .bar.current { background: var(--accent); }
+  .bar-label { font-size: 13px; color: var(--muted); margin-top: 10px; }
+
+  /* Service list */
+  .services { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+  .service {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 16px; border-radius: 14px; border: 1px solid var(--border); background: #fffdfb;
+  }
+  .rank {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--accent-soft); color: var(--accent);
+    font-weight: 800; font-size: 14px; display: grid; place-items: center; flex-shrink: 0;
+  }
+  .service-info { flex: 1; min-width: 0; }
+  .service-name { font-weight: 700; font-size: 16px; }
+  .service-meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .track { height: 6px; background: #f1ebe5; border-radius: 999px; margin-top: 8px; overflow: hidden; }
+  .track div { height: 100%; background: var(--accent); border-radius: 999px; }
+  .service-cost { font-weight: 800; white-space: nowrap; font-size: 16px; }
+  .empty { color: var(--muted); padding: 20px 0; text-align: center; }
+
+  /* Search input */
+  .search {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 18px;
+    background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px;
+  }
+  .search input { border: none; outline: none; width: 100%; background: transparent; color: var(--text); }
+
+  /* History table */
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 14px 12px; border-bottom: 1px solid var(--border); }
+  th { font-size: 13px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+  td.num, th.num { text-align: right; }
+  tr:last-child td { border-bottom: none; }
+
+  /* Budget form */
+  .form-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+  .text-input {
+    padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border);
+    background: #fff; color: var(--text); min-width: 220px; font-size: 16px;
+  }
+  .text-input:focus, .select:focus, .search input:focus { outline: 2px solid var(--accent-border); }
+  .select {
+    padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border);
+    background: #fff; color: var(--text); font-size: 16px;
+  }
+  .btn-primary {
+    padding: 12px 20px; border-radius: 10px; border: none;
+    background: var(--dark); color: #fff; font-weight: 600;
+  }
+  .btn-primary:hover { opacity: 0.9; }
+  .field-label { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .helper { color: var(--muted); font-size: 13px; margin-top: 8px; }
+
+  /* Settings rows */
+  .setting-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 20px;
+    padding: 18px 0; border-bottom: 1px solid var(--border);
+  }
+  .setting-row:last-child { border-bottom: none; }
+  .setting-row strong { display: block; font-size: 16px; }
+  .setting-row small { color: var(--muted); font-size: 13px; }
+
+  .switch { position: relative; display: inline-block; width: 46px; height: 26px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; inset: 0; background: #d6d0ca; border-radius: 999px; transition: 0.2s;
+  }
+  .slider::before {
+    content: ""; position: absolute; width: 20px; height: 20px; left: 3px; top: 3px;
+    background: #fff; border-radius: 50%; transition: 0.2s;
+  }
+  .switch input:checked + .slider { background: var(--accent); }
+  .switch input:checked + .slider::before { transform: translateX(20px); }
+
+  /* Alert dialog */
+  dialog {
+    border: none; border-radius: 16px; padding: 26px; width: min(420px, 92vw);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.2); color: var(--text);
+  }
+  dialog::backdrop { background: rgba(20, 16, 12, 0.35); }
+  dialog h3 { font-size: 20px; font-weight: 800; margin-bottom: 6px; }
+  dialog p { color: var(--muted); font-size: 14px; margin-bottom: 16px; }
+  .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+  .btn-ghost {
+    padding: 12px 18px; border-radius: 10px; border: 1px solid var(--border);
+    background: #fff; color: var(--text); font-weight: 600;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 20px);
+    background: var(--dark); color: #fff; padding: 12px 18px; border-radius: 999px;
+    font-size: 14px; font-weight: 600; opacity: 0; pointer-events: none;
+    transition: 0.25s; box-shadow: var(--shadow);
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (max-width: 900px) {
+    body { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; position: static; border-right: none; border-bottom: 1px solid var(--border); }
+    .nav { flex-direction: row; overflow-x: auto; }
+    .nav-link { white-space: nowrap; }
+    .side-card, .divider { display: none; }
+    .main { padding: 20px 16px 60px; }
+    .grid, .summary { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">C</div>
+      <div>
+        <div class="brand-name">CLOUD<span>COST</span></div>
+        <div class="brand-sub">Spend Monitoring</div>
+      </div>
+    </div>
+    <span class="space-tag">&#10003; Finance Workspace</span>
+
+    <div class="divider"></div>
+
+    <nav class="nav">
+      <a href="#" class="nav-link active" data-view="overview"><span class="icon">&#8962;</span> Overview</a>
+      <a href="#" class="nav-link" data-view="services"><span class="icon">&#9711;</span> Services</a>
+      <a href="#" class="nav-link" data-view="history"><span class="icon">&#8635;</span> History</a>
+      <a href="#" class="nav-link" data-view="budgets"><span class="icon">&#9881;</span> Budgets</a>
+      <a href="#" class="nav-link" data-view="settings"><span class="icon">&#9786;</span> Settings</a>
+    </nav>
+
+    <div class="side-card">
+      <div class="title">&#9432; Budget Status</div>
+      <p id="sidebarStatus">Loading...</p>
+      <button class="btn-outline" id="goBudgetBtn">View budget</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <section class="card header">
+      <div>
+        <h1 id="pageTitle">Cloud Cost Tracker</h1>
+        <p id="pageSub">Monthly cloud spending and the top 5 most expensive services.</p>
+      </div>
+      <div class="header-actions">
+        <button class="pill-btn pill-dark" id="exportBtn">&#128202; Export</button>
+        <button class="pill-btn pill-accent" id="alertBtn">&#9888; Set Alert</button>
+        <span class="pill-btn pill-neutral">October 2026</span>
+      </div>
+    </section>
+
+    <!-- Overview -->
+    <div id="view-overview" class="view">
+      <section class="summary">
+        <div class="card stat">
+          <div class="label">Spend this month</div>
+          <div class="value" id="spendValue">-</div>
+          <div class="note" id="spendNote"></div>
+        </div>
+        <div class="card stat">
+          <div class="label">Budget used</div>
+          <div class="value" id="budgetPctValue">-</div>
+          <div class="note" id="budgetNote"></div>
+        </div>
+        <div class="card stat">
+          <div class="label">Projected month end</div>
+          <div class="value" id="projValue">-</div>
+          <div class="note" id="projNote"></div>
+        </div>
+      </section>
+
+      <div class="grid">
+        <section class="card panel">
+          <div class="panel-head">
+            <h2>Monthly cloud spending</h2>
+            <p id="chartSub">Click a bar to see its total</p>
+          </div>
+          <div class="chart" id="chart"></div>
+        </section>
+
+        <section class="card panel">
+          <div class="panel-head">
+            <h2>Top 5 expensive services</h2>
+            <p>This month</p>
+          </div>
+          <ul class="services" id="top5"></ul>
+        </section>
+      </div>
+    </div>
+
+    <!-- Services -->
+    <div id="view-services" class="view hidden">
+      <section class="card panel">
+        <div class="panel-head">
+          <h2>All services</h2>
+          <p>Ranked by cost this month</p>
+        </div>
+        <label class="search">
+          <span>&#128269;</span>
+          <input type="text" id="serviceSearch" placeholder="Search services">
+        </label>
+        <ul class="services" id="allServices"></ul>
+      </section>
+    </div>
+
+    <!-- History -->
+    <div id="view-history" class="view hidden">
+      <section class="card panel">
+        <div class="panel-head">
+          <h2>Spending history</h2>
+          <p>Last 6 months</p>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th class="num">Spend</th>
+              <th class="num">Change</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </section>
+    </div>
+
+    <!-- Budgets -->
+    <div id="view-budgets" class="view hidden">
+      <section class="card panel">
+        <div class="panel-head">
+          <h2>Monthly budget</h2>
+          <p>This amount is used for budget usage and projections</p>
+        </div>
+        <label class="field-label" for="budgetInput">Budget amount</label>
+        <div class="form-row">
+          <input type="number" id="budgetInput" class="text-input" min="1" step="100">
+          <button class="btn-primary" id="saveBudgetBtn">Save budget</button>
+        </div>
+        <p class="helper" id="budgetHelper"></p>
+      </section>
+    </div>
+
+    <!-- Settings -->
+    <div id="view-settings" class="view hidden">
+      <section class="card panel">
+        <div class="panel-head">
+          <h2>Preferences</h2>
+          <p>Display and notification options</p>
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <strong>Currency</strong>
+            <small>Changes how amounts are displayed</small>
+          </div>
+          <select class="select" id="currencySelect">
+            <option value="USD">USD ($)</option>
+            <option value="EUR">EUR (&euro;)</option>
+            <option value="INR">INR (&#8377;)</option>
+          </select>
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <strong>Budget alert notifications</strong>
+            <small>Notify me when spend passes the alert threshold</small>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="notifyToggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </section>
+    </div>
+
+  </main>
+
+  <!-- Alert dialog -->
+  <dialog id="alertDialog">
+    <form method="dialog" id="alertForm">
+      <h3>Set budget alert</h3>
+      <p>Get notified when spend reaches this percentage of the monthly budget.</p>
+      <label class="field-label" for="alertInput">Threshold (%)</label>
+      <input type="number" id="alertInput" class="text-input" min="1" max="100" required style="width:100%">
+      <div class="dialog-actions">
+        <button type="button" class="btn-ghost" id="cancelAlertBtn">Cancel</button>
+        <button type="submit" class="btn-primary" value="save">Save alert</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+  // ---------- Data ----------
+  const state = {
+    budget: 60000,
+    alertPct: 80,
+    currency: "USD",
+    notify: true,
+    selected: 5,
+    months: [
+      { m: "May", v: 38200 },
+      { m: "Jun", v: 41500 },
+      { m: "Jul", v: 39900 },
+      { m: "Aug", v: 44800 },
+      { m: "Sep", v: 45300 },
+      { m: "Oct", v: 48250 }
+    ],
+    services: [
+      { name: "Compute Instances", meta: "us-east-1", cost: 16400 },
+      { name: "Managed Database", meta: "PostgreSQL clusters", cost: 11150 },
+      { name: "Object Storage", meta: "Backups and media", cost: 7380 },
+      { name: "Data Transfer", meta: "Outbound traffic", cost: 5090 },
+      { name: "Load Balancers", meta: "Application LBs", cost: 3030 },
+      { name: "Serverless Functions", meta: "API handlers", cost: 1820 },
+      { name: "Logging & Monitoring", meta: "Metrics and logs", cost: 1260 }
+    ]
+  };
+
+  // Sample exchange rates for display only
+  const RATES = { USD: 1, EUR: 0.92, INR: 83 };
+  const SYMBOLS = { USD: "$", EUR: "€", INR: "₹" };
+
+  const titles = {
+    overview: ["Cloud Cost Tracker", "Monthly cloud spending and the top 5 most expensive services."],
+    services: ["Services", "All services ranked by cost this month."],
+    history: ["Spending History", "Month-by-month cloud spend over the last six months."],
+    budgets: ["Budgets", "Set the monthly cloud budget used across the dashboard."],
+    settings: ["Settings", "Currency and notification preferences."]
+  };
+
+  // ---------- Helpers ----------
+  const $ = (id) => document.getElementById(id);
+
+  function money(usd) {
+    return SYMBOLS[state.currency] + Math.round(usd * RATES[state.currency]).toLocaleString("en-US");
+  }
+  function moneyK(usd) {
+    return SYMBOLS[state.currency] + (usd * RATES[state.currency] / 1000).toFixed(1) + "k";
+  }
+  function currentSpend() {
+    return state.months[state.months.length - 1].v;
+  }
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(() => t.classList.remove("show"), 2400);
+  }
+
+  // ---------- Renderers ----------
+  function renderSummary() {
+    const spend = currentSpend();
+    const prev = state.months[state.months.length - 2].v;
+    const change = ((spend - prev) / prev) * 100;
+    const pct = (spend / state.budget) * 100;
+    const remaining = Math.max(state.budget - spend, 0);
+    const projected = Math.round(spend * 1.16); // sample projection factor
+
+    $("spendValue").textContent = money(spend);
+    $("spendNote").textContent = (change >= 0 ? "↑ " : "↓ ") + Math.abs(change).toFixed(1) + "% vs last month";
+    $("spendNote").className = "note " + (change >= 0 ? "up" : "down");
+
+    $("budgetPctValue").textContent = Math.round(pct) + "%";
+    $("budgetNote").textContent = money(remaining) + " left of " + money(state.budget);
+
+    $("projValue").textContent = money(projected);
+    const over = projected > state.budget;
+    $("projNote").textContent = over ? "↑ over budget" : "↓ within budget";
+    $("projNote").className = "note " + (over ? "up" : "down");
+
+    const alertText = pct >= state.alertPct
+      ? "Alert threshold reached."
+      : "Alert at " + state.alertPct + "%.";
+    $("sidebarStatus").textContent = Math.round(pct) + "% of the monthly budget has been used. " + alertText;
+
+    $("budgetHelper").textContent = "Current budget: " + money(state.budget) + ". Alert threshold: " + state.alertPct + "%.";
+  }
+
+  function renderChart() {
+    const max = Math.max(...state.months.map(x => x.v));
+    $("chart").innerHTML = state.months.map((x, i) => `
+      <div class="bar-col" data-i="${i}">
+        <div class="bar-value">${moneyK(x.v)}</div>
+        <div class="bar ${i === state.selected ? "current" : ""}" style="height:${(x.v / max * 100).toFixed(1)}%"></div>
+        <div class="bar-label">${x.m}</div>
+      </div>`).join("");
+
+    const sel = state.months[state.selected];
+    $("chartSub").textContent = sel.m + ": " + money(sel.v) + " (click a bar to change)";
+  }
+
+  function sortedServices() {
+    return [...state.services].sort((a, b) => b.cost - a.cost);
+  }
+
+  function renderTop5() {
+    const top = sortedServices().slice(0, 5);
+    const max = top[0].cost;
+    $("top5").innerHTML = top.map((s, i) => serviceItem(s, i + 1, max)).join("");
+  }
+
+  function renderServices(filter = "") {
+    const all = sortedServices();
+    const max = all[0].cost;
+    const q = filter.trim().toLowerCase();
+    const list = all.filter(s => s.name.toLowerCase().includes(q) || s.meta.toLowerCase().includes(q));
+    $("allServices").innerHTML = list.length
+      ? list.map(s => serviceItem(s, all.indexOf(s) + 1, max)).join("")
+      : `<li class="empty">No services match "${filter}".</li>`;
+  }
+
+  function serviceItem(s, rank, max) {
+    return `
+      <li class="service">
+        <div class="rank">${rank}</div>
+        <div class="service-info">
+          <div class="service-name">${s.name}</div>
+          <div class="service-meta">${s.meta}</div>
+          <div class="track"><div style="width:${(s.cost / max * 100).toFixed(1)}%"></div></div>
+        </div>
+        <div class="service-cost">${money(s.cost)}</div>
+      </li>`;
+  }
+
+  function renderHistory() {
+    $("historyBody").innerHTML = state.months.map((x, i) => {
+      let changeHtml = "—";
+      if (i > 0) {
+        const prev = state.months[i - 1].v;
+        const c = ((x.v - prev) / prev) * 100;
+        const cls = c >= 0 ? "note up" : "note down";
+        changeHtml = `<span class="${cls}">${c >= 0 ? "↑" : "↓"} ${Math.abs(c).toFixed(1)}%</span>`;
+      }
+      return `<tr><td>${x.m}</td><td class="num">${money(x.v)}</td><td class="num">${changeHtml}</td></tr>`;
+    }).reverse().join("");
+  }
+
+  function renderAll() {
+    renderSummary();
+    renderChart();
+    renderTop5();
+    renderServices($("serviceSearch").value);
+    renderHistory();
+    $("budgetInput").value = state.budget;
+    $("currencySelect").value = state.currency;
+    $("notifyToggle").checked = state.notify;
+  }
+
+  // ---------- Navigation ----------
+  function setView(name) {
+    document.querySelectorAll(".view").forEach(v => v.classList.toggle("hidden", v.id !== "view-" + name));
+    document.querySelectorAll(".nav-link").forEach(a => a.classList.toggle("active", a.dataset.view === name));
+    $("pageTitle").textContent = titles[name][0];
+    $("pageSub").textContent = titles[name][1];
+    window.scrollTo(0, 0);
+  }
+
+  document.querySelectorAll(".nav-link").forEach(a => {
+    a.addEventListener("click", e => {
+      e.preventDefault();
+      setView(a.dataset.view);
+    });
+  });
+
+  $("goBudgetBtn").addEventListener("click", () => setView("budgets"));
+
+  // ---------- Actions ----------
+  $("exportBtn").addEventListener("click", () => {
+    const lines = ["Month,Spend (USD)"];
+    state.months.forEach(x => lines.push(`${x.m},${x.v}`));
+    lines.push("", "Service,Cost (USD)");
+    sortedServices().forEach(s => lines.push(`${s.name},${s.cost}`));
+
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "cloud-cost-report.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+    toast("CSV report downloaded");
+  });
+
+  const alertDialog = $("alertDialog");
+  $("alertBtn").addEventListener("click", () => {
+    $("alertInput").value = state.alertPct;
+    alertDialog.showModal();
+  });
+  $("cancelAlertBtn").addEventListener("click", () => alertDialog.close());
+  alertDialog.addEventListener("close", () => {
+    if (alertDialog.returnValue !== "save") return;
+    const v = Number($("alertInput").value);
+    if (v >= 1 && v <= 100) {
+      state.alertPct = v;
+      renderAll();
+      toast("Alert set at " + v + "% of budget");
+    } else {
+      toast("Enter a value between 1 and 100");
+    }
+  });
+
+  $("saveBudgetBtn").addEventListener("click", () => {
+    const v = Number($("budgetInput").value);
+    if (!(v > 0)) {
+      toast("Enter a budget greater than 0");
+      return;
+    }
+    state.budget = v;
+    renderAll();
+    toast("Budget saved");
+  });
+
+  $("serviceSearch").addEventListener("input", e => renderServices(e.target.value));
+
+  $("chart").addEventListener("click", e => {
+    const col = e.target.closest(".bar-col");
+    if (!col) return;
+    state.selected = Number(col.dataset.i);
+    renderChart();
+  });
+
+  $("currencySelect").addEventListener("change", e => {
+    state.currency = e.target.value;
+    renderAll();
+    toast("Currency changed to " + state.currency);
+  });
+
+  $("notifyToggle").addEventListener("change", e => {
+    state.notify = e.target.checked;
+    toast(state.notify ? "Alert notifications on" : "Alert notifications off");
+  });
+
+  // ---------- Init ----------
+  renderAll();
+</script>
+</body>
+</html>
